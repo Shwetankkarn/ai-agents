@@ -31,7 +31,33 @@ import {
 
 const app = express();
 
+app.use((req, res, next) => {
+    const allowedOrigin = process.env.CORS_ORIGIN;
+
+    if (allowedOrigin && req.headers.origin === allowedOrigin) {
+        res.setHeader("Access-Control-Allow-Origin", allowedOrigin);
+        res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
+        res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
+    }
+
+    if (req.method === "OPTIONS") {
+        return res.sendStatus(204);
+    }
+
+    next();
+});
+
 app.use(clerkMiddleware());
+
+app.use((req, res, next) => {
+    if (req.url === "/api") {
+        req.url = "/";
+    } else if (req.url.startsWith("/api/")) {
+        req.url = req.url.slice(4);
+    }
+
+    next();
+});
 
 const PORT = process.env.PORT || 3000;
 
@@ -60,7 +86,7 @@ Rules:
     return title.trim();
 }
 
-app.get("/api", (req, res) => {
+app.get(["/", "/api"], (req, res) => {
     res.send("AI Agent Server is running");
 });
 
@@ -504,7 +530,9 @@ app.delete("/conversation/:conversationId", async (req, res) => {
 // MONGODB
 // ========================
 
-connectDB();
+connectDB().catch(error => {
+    console.error("MongoDB connection error:", error.message);
+});
 
 
 // ========================

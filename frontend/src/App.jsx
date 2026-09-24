@@ -4,6 +4,8 @@ import "./App.css";
 import ReactMarkdown from "react-markdown";
 import { SignIn, SignUp, useAuth, useClerk, useUser } from "@clerk/react";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+
 
 function CodeBlock({ children }) {
     const [copied, setCopied] = useState(false);
@@ -42,10 +44,6 @@ function ChatApp() {
      const { signOut } = useClerk();
      const { user } = useUser();
 
-
-useEffect(() => {
-    testAuth();
-}, []);
 
   const [message, setMessage] = useState("");
     const [messages, setMessages] = useState([]);
@@ -88,7 +86,7 @@ const loadConversations = async (updateState = true) => {
         const token = await getToken();
 
 
-        const response = await axios.get("/conversations", {
+        const response = await axios.get(`${API_BASE_URL}/conversations`, {
             headers: {
                 Authorization: `Bearer ${token}`
             }
@@ -125,8 +123,8 @@ const loadConversation = async (conversationId) => {
 
        const token = await getToken();
  
-        const response = await axios.get(
-    `/conversation/${conversationId}`,
+         const response = await axios.get(
+     `${API_BASE_URL}/conversation/${conversationId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`
@@ -162,7 +160,7 @@ const deleteConversation = async (conversationId) => {
 
         const token = await getToken();
 
-        await axios.delete(`/conversation/${conversationId}`, {
+        await axios.delete(`${API_BASE_URL}/conversation/${conversationId}`, {
     headers: {
         Authorization: `Bearer ${token}`
     }
@@ -285,7 +283,7 @@ useEffect(() => {
     initializeApp();
 }, []);
 
-const createNewChat = async () => {
+async function createNewChat() {
     try {
           if (activeConversationId && messages.length === 0) {
         return;
@@ -293,7 +291,7 @@ const createNewChat = async () => {
        const token = await getToken();
 
 const response = await axios.post(
-    "/conversations",
+    `${API_BASE_URL}/conversations`,
     {
         title: "New Chat"
     },
@@ -324,7 +322,7 @@ const response = await axios.post(
     } catch (error) {
         console.error(error);
     }
-};
+}
 
 const sendMessage = async () => {
     if (!message.trim()) {
@@ -349,7 +347,7 @@ const sendMessage = async () => {
       const token = await getToken();
 
 const response = await axios.post(
-    "/chat",
+    `${API_BASE_URL}/chat`,
     {
         conversationId: activeConversationId,
         message: message

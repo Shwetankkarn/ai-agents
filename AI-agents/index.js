@@ -60,10 +60,8 @@ Rules:
     return title.trim();
 }
 
-app.get("/", (req, res) => {
-
+app.get("/api", (req, res) => {
     res.send("AI Agent Server is running");
-
 });
 
 

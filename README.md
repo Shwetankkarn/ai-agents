@@ -1,26 +1,52 @@
-# AI Agents
+<div align="center">
 
-A production-ready multi-agent AI assistant that routes each user request to the most relevant specialist agent. The application combines a React chat interface, Clerk authentication, an Express API, MongoDB conversation memory, and external data services behind one workflow.
+<img src="https://media.giphy.com/media/qgQUggAC3Pfv687qPC/giphy.gif" alt="AI coding animation" width="180" />
 
-## Live Application
+# ✦ AI Agents
 
-- Frontend: https://frontend-omega-ruby-s9i8nou6sn.vercel.app
-- Backend health: https://ai-agents-pied.vercel.app/api
-- Repository: https://github.com/Shwetankkarn/ai-agents
+### One chat. Five specialists. Infinite directions.
 
-## What It Does
+<img src="https://readme-typing-svg.demolab.com?font=Space+Mono&size=18&duration=2800&pause=900&color=6D4AFF&center=true&vCenter=true&width=720&lines=Ask+anything%2C+the+router+finds+the+right+agent.;Weather+%C2%B7+News+%C2%B7+GitHub+%C2%B7+Blockchain+%C2%B7+Web;Persistent+memory+with+secure+Clerk+authentication." alt="AI Agents animated tagline" />
 
-Ask one question in natural language and the router selects the best agent:
+<br />
 
-| Agent | Handles |
-| --- | --- |
-| Weather | Current weather and forecasts by city and date |
-| News | Recent news and topic-based headlines |
-| GitHub | User profiles and public repositories |
-| Blockchain | Cryptocurrency and blockchain questions |
-| Web | General web search and research questions |
+[![Live App](https://img.shields.io/badge/Live%20App-Open%20now-6D4AFF?style=for-the-badge&logo=vercel&logoColor=white)](https://frontend-omega-ruby-s9i8nou6sn.vercel.app)
+[![API Health](https://img.shields.io/badge/API-Healthy-20C997?style=for-the-badge&logo=fastapi&logoColor=white)](https://ai-agents-pied.vercel.app/api)
+[![GitHub](https://img.shields.io/badge/GitHub-Source-181717?style=for-the-badge&logo=github)](https://github.com/Shwetankkarn/ai-agents)
 
-The app supports authenticated users, multiple conversations, persistent message history, generated conversation titles, rolling summaries, Markdown answers, code-block copying, online/offline status, and conversation deletion.
+<br />
+
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=111827)
+![Node](https://img.shields.io/badge/Node.js-20%2B-5FA04E?style=flat-square&logo=node.js&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-Memory-47A248?style=flat-square&logo=mongodb&logoColor=white)
+![Clerk](https://img.shields.io/badge/Clerk-Auth-6C47FF?style=flat-square)
+![Vercel](https://img.shields.io/badge/Vercel-Deployed-000000?style=flat-square&logo=vercel)
+
+</div>
+
+> A production-ready multi-agent AI assistant that routes every request to the most relevant specialist, remembers the conversation, and returns a useful answer in one focused chat experience.
+
+## ✨ Agent Desk
+
+| Specialist | Best for | Signal |
+| --- | --- | --- |
+| 🌤️ **Weather** | Current conditions and forecasts | City + date aware |
+| 🗞️ **News** | Recent headlines and topic research | Multi-topic search |
+| 🐙 **GitHub** | Profiles and public repositories | Live GitHub data |
+| ⛓️ **Blockchain** | Crypto and blockchain questions | Market-aware routing |
+| 🌐 **Web** | General web search and research | Tavily-powered context |
+
+The experience includes Clerk auth, multiple conversations, MongoDB message history, generated titles, rolling summaries, Markdown answers, code copying, online/offline status, and safe conversation deletion.
+
+## 🎬 The Experience
+
+<div align="center">
+
+<img src="https://readme-typing-svg.demolab.com?font=JetBrains+Mono&size=16&duration=2200&pause=700&color=20C997&center=true&vCenter=true&width=650&lines=route(question)+%E2%86%92+specialist;specialist+%E2%86%92+live+data;live+data+%E2%86%92+memory+%E2%86%92+answer" alt="AI request flow animation" />
+
+</div>
+
+Try it live: **[Launch AI Agents](https://frontend-omega-ruby-s9i8nou6sn.vercel.app)**
 
 ## Architecture
 

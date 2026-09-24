@@ -1,6 +1,7 @@
 
 import express from "express";
 import dotenv from "dotenv";
+import mongoose from "mongoose";
 import Conversation from "./models/Conversation.js";
 import askGemini from "./services/gemini.js";
 import {
@@ -11,8 +12,6 @@ import { clerkMiddleware } from "@clerk/express";
 import { getAuth } from "@clerk/express";
 
 dotenv.config();
-console.log("Clerk secret loaded:", !!process.env.CLERK_SECRET_KEY);
-console.log("Clerk publishable loaded:", !!process.env.CLERK_PUBLISHABLE_KEY);
 
 import routeQuestion from "./router/router.js";
 import weatherAgent from "./agents/weatherAgent.js";
@@ -20,16 +19,14 @@ import newsAgent from "./agents/newsAgent.js";
 import githubAgent from "./agents/githubAgent.js";
 import webAgent from "./agents/webAgent.js";
 import blockchainAgent from "./agents/blockchainAgent.js";
+import expertAgent from "./agents/expertAgent.js";
 import handleError from "./utils/errorHandler.js";
 
 import connectDB from "./config/db.js";
 
-import {
-    getConversation,
-    saveMessage
-} from "./services/memory.js";
 
 const app = express();
+const supportedSectors = new Set(["auto", "research", "writing", "coding", "education", "business", "data", "healthcare", "law", "public-services", "finance", "science", "agriculture", "languages"]);
 
 app.use((req, res, next) => {
     const allowedOrigin = process.env.CORS_ORIGIN;
@@ -61,7 +58,18 @@ app.use((req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
+app.use(express.json({ limit: "32kb" }));
+
+app.use(async (req, res, next) => {
+    if (req.path === "/") return next();
+    try {
+        await connectDB();
+        next();
+    } catch (error) {
+        console.error("Database unavailable:", error.name);
+        res.status(503).json({ error: "Conversation storage is temporarily unavailable." });
+    }
+});
 
 
 // ========================
@@ -125,7 +133,7 @@ app.get("/conversation/:conversationId", async (req, res) => {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Conversation load failed:", error.name);
 
         res.status(500).json({
             error: "Failed to load conversation"
@@ -156,7 +164,7 @@ app.get("/conversations", async (req, res) =>  {
         });
 
     } catch (error) {
-        console.error(error);
+        console.error("Conversation list failed:", error.name);
 
         res.status(500).json({
             error: "Failed to load conversations"
@@ -168,13 +176,7 @@ app.post("/conversations", async (req, res) => {
 
     try {
 
-       const { userId, isAuthenticated } = getAuth(req);
-
-console.log("CONVERSATIONS AUTH TEST");
-console.log("User ID:", userId);
-console.log("Authenticated:", isAuthenticated);
-
-
+       const { userId } = getAuth(req);
 
         if (!userId) {
             return res.status(401).json({
@@ -182,7 +184,7 @@ console.log("Authenticated:", isAuthenticated);
             });
         }
 
-        const { title } = req.body;
+        const title = typeof req.body?.title === "string" ? req.body.title.trim().slice(0, 100) : "";
 
         const conversation = await Conversation.create({
             userId: userId,
@@ -212,31 +214,37 @@ app.post("/chat", async (req, res) => {
 
     try {
 
-        const { userId, isAuthenticated } = getAuth(req);
-
-console.log("CHAT AUTH TEST");
-console.log("User ID:", userId);
-console.log("Authenticated:", isAuthenticated);
+        const { userId } = getAuth(req);
         
          if (!userId) {
     return res.status(401).json({
         error: "Unauthorized. Please sign in."
     });
 }
-        const conversationId = req.body.conversationId;
-        const question = req.body.message;
+        const body = req.body || {};
+        const conversationId = body.conversationId;
+        const question = typeof body.message === "string" ? body.message.trim() : "";
+        const requestedSector = supportedSectors.has(body.sector) ? body.sector : "auto";
 
 
         // ========================
         // VALIDATION
         // ========================
 
-        if (!userId || !conversationId || !question) {
+        if (!conversationId || !question) {
 
             return res.status(400).json({
-                error: "userId, conversationId and message are required"
+                error: "conversationId and a non-empty message are required"
             });
 
+        }
+
+        if (!mongoose.isValidObjectId(conversationId)) {
+            return res.status(404).json({ error: "Conversation not found" });
+        }
+
+        if (question.length > 6000) {
+            return res.status(413).json({ error: "Please keep messages under 6,000 characters." });
         }
 
 
@@ -266,8 +274,6 @@ console.log("Authenticated:", isAuthenticated);
 
             const title = await generateTitle(question);
 
-            console.log("QUESTION:", question);
-            console.log("GENERATED TITLE:", title);
 
             conversation.title = title;
 
@@ -277,13 +283,6 @@ console.log("Authenticated:", isAuthenticated);
         // ========================
         // CONVERSATION HISTORY
         // ========================
-
-        console.log("Conversation history:");
-        console.log(conversation.messages);
-
-
-        console.log("\nUser:");
-        console.log(question);
 
 
         // ========================
@@ -347,10 +346,6 @@ ${recentContext}
         await conversation.save();
 
 
-        console.log("Context:");
-        console.log(context);
-
-
         // ========================
         // STEP 1
         // ROUTER
@@ -358,18 +353,16 @@ ${recentContext}
 
         const route = await routeQuestion(
             question,
-            context
+            context,
+            requestedSector
         );
 
-        console.log("Router result:", route);
 
 
         const agent = route.agent;
         const query = route.query;
 
 
-        console.log("Selected agent:", agent);
-        console.log("Agent query:", query);
 
 
         // ========================
@@ -434,6 +427,14 @@ ${recentContext}
 
         }
 
+        else if (agent === "expert") {
+            answer = await expertAgent(
+                question,
+                requestedSector === "auto" ? (query.focus || "auto") : requestedSector,
+                context
+            );
+        }
+
 
         else {
 
@@ -496,9 +497,10 @@ app.delete("/conversation/:conversationId", async (req, res) => {
         }
         
         const conversationId = req.params.conversationId;
+        if (!mongoose.isValidObjectId(conversationId)) {
+            return res.status(404).json({ error: "Conversation not found" });
+        }
 
-        console.log("Conversation ID:", conversationId);
-        console.log("User ID:", userId);
 
         const conversation = await Conversation.findOneAndDelete({
             _id: conversationId,
@@ -520,7 +522,7 @@ app.delete("/conversation/:conversationId", async (req, res) => {
         console.error("DELETE ERROR:", error);
 
         res.status(500).json({
-            error: error.message
+            error: "Failed to delete conversation"
         });
     }
 });
@@ -529,11 +531,6 @@ app.delete("/conversation/:conversationId", async (req, res) => {
 // ========================
 // MONGODB
 // ========================
-
-connectDB().catch(error => {
-    console.error("MongoDB connection error:", error.message);
-});
-
 
 // ========================
 // SERVER
@@ -546,333 +543,3 @@ if (process.env.VERCEL !== "1") {
         console.log(`AI Agent Server listening on port ${PORT}`);
     });
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import express from "express";
-// import dotenv from "dotenv";
-// import { GoogleGenAI } from "@google/genai";
-
-// dotenv.config();
-
-// const app = express();
-// const PORT = process.env.PORT || 3000;
-
-// app.use(express.json());
-
-
-// // ===============================
-// // Gemini setup
-// // ===============================
-
-// const ai = new GoogleGenAI({
-//     apiKey: process.env.GEMINI_API_KEY
-// });
-
-
-// // ===============================
-// // STEP 1
-// // Gemini understands user question
-// // ===============================
-
-// async function getLocationFromLLM(question) {
-
-//     const prompt = `
-// You are a weather query parser.
-
-// The user will ask a question about weather.
-
-// Extract every city and date from the user's question.
-
-// Return ONLY valid JSON.
-
-// Format:
-
-// [
-//     {
-//         "city": "Delhi",
-//         "date": "today"
-//     }
-// ]
-
-// Rules:
-
-// 1. If user says today, return "today".
-// 2. If user says tomorrow, return "tomorrow".
-// 3. If multiple cities are mentioned, return multiple objects.
-// 4. Do not give any explanation.
-// 5. Return ONLY the JSON array.
-
-// User question:
-// ${question}
-// `;
-
-//     const interaction = await ai.interactions.create({
-//         model: "gemini-3.6-flash",
-//         input: prompt
-//     });
-
-//     const output = interaction.output_text;
-
-//     console.log("LLM output:");
-//     console.log(output);
-
-//     return JSON.parse(output);
-// }
-
-
-// // ===============================
-// // STEP 2
-// // Get actual weather
-// // ===============================
-
-// async function getWeather(location) {
-
-//     const weatherInfo = [];
-
-//     for (const { city, date } of location) {
-
-//         if (date.toLowerCase() === "today") {
-
-//             const response = await fetch(
-//                 `http://api.weatherapi.com/v1/current.json?key=${process.env.WEATHER_API_KEY}&q=${city}&aqi=no`
-//             );
-
-//             const data = await response.json();
-
-//             weatherInfo.push(data);
-
-//         } else {
-
-//             const response = await fetch(
-//                 `http://api.weatherapi.com/v1/future.json?key=${process.env.WEATHER_API_KEY}&q=${city}&dt=${date}`
-//             );
-
-//             const data = await response.json();
-
-//             weatherInfo.push(data);
-//         }
-//     }
-
-//     return weatherInfo;
-// }
-
-// // STEP 3
-// // Send actual weather data to LLM
-
-
-// async function generateWeatherReport(question, weatherData) {
-
-//     const interaction = await ai.interactions.create({
-//         model: "gemini-3.6-flash",
-//         input: `
-// User question:
-// ${question}
-
-// Weather data:
-// ${JSON.stringify(weatherData)}
-
-// Answer the user naturally and concisely.
-// Answer in the same language as the user.
-// `
-//     });
-
-// let response = interaction.output_text.trim();
-
-// response = response
-//     .replace(/\*\*/g, "")        // **bold**
-//     .replace(/^\* /gm, "")       // * bullet
-//     .replace(/^[-•] /gm, "")     // - or • bullet
-//     .replace(/^#+\s*/gm, "")     // headings
-//     .replace(/^---+$/gm, "")     // --- separator
-//     .replace(/\n{2,}/g, "\n")     // extra blank lines
-//     .trim();
-
-// return response;
-// }
-
-// // ===============================
-// // CHAT ROUTE
-// // ===============================
-
-// app.post("/chat", async (req, res) => {
-
-//     try {
-
-
-//         // User input from Postman
-
-
-//         const question = req.body.message;
-
-//         if (!question) {
-
-//             return res.status(400).json({
-//                 error: "message is required"
-//             });
-//         }
-
-//         console.log("\nUser question:");
-//         console.log(question);
-
-
-//          // LLM #1
-//         // Extract city and date
-
-
-//         const location =
-//             await getLocationFromLLM(question);
-
-//         console.log("\nExtracted location:");
-//         console.log(location);
-
-
-//         // ---------------------------
-//         // Weather API
-//         // ---------------------------
-
-//         const weatherData =
-//             await getWeather(location);
-
-//         console.log("\nWeather data received");
-
-
-//         // ---------------------------
-//         // LLM #2
-//         // Generate final answer
-//         // ---------------------------
-
-//         const finalAnswer =
-//             await generateWeatherReport(
-//                 question,
-//                 weatherData
-//             );
-
-
-//         // ---------------------------
-//         // Send response to Postman
-//         // ---------------------------
-
-//         res.json({
-//             answer: finalAnswer
-//         });
-
-//     } catch (error) {
-
-//         console.error(error);
-
-//         res.status(500).json({
-//             error: error.message
-//         });
-//     }
-// });
-
-
-// // ===============================
-// // START SERVER
-// // ===============================
-
-// app.listen(PORT, () => {
-
-//     console.log(
-//         `Server running at http://localhost:${PORT}`
-//     );
-
-// });
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// import { GoogleGenAI } from "@google/genai";
-// import dotenv from "dotenv";
-
-// dotenv.config();
-
-// const ai = new GoogleGenAI({
-//     apiKey: process.env.GEMINI_API_KEY
-// });
-
-// async function main() {
-//     const interaction = await ai.interactions.create({
-//         model: "gemini-3.6-flash",
-//         input: msg
-//     });
-
-//     return interaction.output_text;
-// }
-
-// // weather leke aayega
-
-
-// async function getWeather(location){
-
-//     const weatherInfo= [];
-
-// for(const {city,date} of location){
-
-//     if(date.toLowerCase()== 'today')
-// {
-//   const response=  await fetch(`http://api.weatherapi.com/v1/current.json?key=57abde2fc683482890a164051263008&q=${city}`)
-//   const data= await response.json();
-//   weatherInfo.push(data);
-
-// }
-
-// else{
-
-//       const response=  await fetch(`http://api.weatherapi.com/v1/future.json?key=57abde2fc683482890a164051263008&q=4{city}&dt=${date}`)
-//   const data= await response.json();
-//   weatherInfo.push(data);
-
-// }
-
-// }
-
-// return weatherInfo;
-
-// }
-
-
- 
-
-
-
-
-
-// export default main;

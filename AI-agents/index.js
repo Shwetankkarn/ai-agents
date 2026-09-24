@@ -541,6 +541,12 @@ connectDB().catch(error => {
 
 export default app;
 
+if (process.env.VERCEL !== "1") {
+    app.listen(PORT, () => {
+        console.log(`AI Agent Server listening on port ${PORT}`);
+    });
+}
+
 
 
 

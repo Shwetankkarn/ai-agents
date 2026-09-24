@@ -31,9 +31,7 @@ import {
 
 const app = express();
 
-app.use(clerkMiddleware({
-    jwtKey: process.env.CLERK_JWT_KEY
-}));
+app.use(clerkMiddleware());
 
 const PORT = process.env.PORT || 3000;
 

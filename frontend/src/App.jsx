@@ -101,7 +101,7 @@ function ChatApp() {
 
     const loadConversation = useCallback(async (conversationId) => {
         try {
-            const response = await request("get", `/conversation/${conversationId}`);
+            const response = await request("get", `/conversations/${conversationId}`);
             setMessages(response.data.messages || []);
             setActiveConversationId(conversationId);
             localStorage.setItem("activeConversationId", conversationId);

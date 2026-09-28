@@ -124,7 +124,7 @@ const loadConversation = async (conversationId) => {
        const token = await getToken();
  
          const response = await axios.get(
-     `${API_BASE_URL}/conversation/${conversationId}`,
+     `${API_BASE_URL}/conversations/${conversationId}`,
     {
         headers: {
             Authorization: `Bearer ${token}`

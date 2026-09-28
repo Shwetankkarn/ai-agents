@@ -115,39 +115,24 @@ const loadConversations = async (updateState = true) => {
     }
 };
 
-const loadConversation = async (conversationId) => {
+const loadConversation = async (
+    conversationId,
+    conversationList = conversations
+) => {
+    const conversation = conversationList.find(
+        conversation => conversation._id === conversationId
+    );
 
-
-    try {
-        
-
-       const token = await getToken();
- 
-         const response = await axios.get(
-     `${API_BASE_URL}/conversations/${conversationId}`,
-    {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
+    if (!conversation) {
+        setActiveConversationId(null);
+        setMessages([]);
+        localStorage.removeItem("activeConversationId");
+        return;
     }
-     );
 
-
-        setMessages(response.data.messages);
-        setActiveConversationId(conversationId);
-
-        localStorage.setItem(
-            "activeConversationId",
-            conversationId
-        );
-
-    } catch (error) {
-        console.error("CONVERSATION ERROR:", error);
-          setActiveConversationId(null);
-    setMessages([]);
-
-    localStorage.removeItem("activeConversationId");
-    }
+    setMessages(conversation.messages || []);
+    setActiveConversationId(conversationId);
+    localStorage.setItem("activeConversationId", conversationId);
 };
 
 const deleteConversation = async (conversationId) => {
@@ -197,6 +182,7 @@ useEffect(() => {
     const initializeApp = async () => {
 
         try {
+
             const savedConversationId =
                 localStorage.getItem("activeConversationId");
 
@@ -216,7 +202,10 @@ useEffect(() => {
 
                 if (savedConversation) {
 
-                    await loadConversation(savedConversationId);
+                    await loadConversation(
+                        savedConversationId,
+                        conversations
+                    );
 
                 } else {
 
@@ -230,7 +219,8 @@ useEffect(() => {
                             conversations[0];
 
                         await loadConversation(
-                            firstConversation._id
+                            firstConversation._id,
+                            conversations
                         );
 
                     } else {
@@ -244,24 +234,24 @@ useEffect(() => {
                     }
                 }
 
-            }  else {
+            } else {
 
-    if (conversations.length > 0) {
+                if (conversations.length > 0) {
 
-        const firstConversation =
-            conversations[0];
+                    const firstConversation =
+                        conversations[0];
 
-        await loadConversation(
-            firstConversation._id
-        );
+                    await loadConversation(
+                        firstConversation._id,
+                        conversations
+                    );
 
-    } else {
+                } else {
 
-        await createNewChat();
+                    await createNewChat();
 
-    }
-}
-
+                }
+            }
 
         } catch (error) {
 
@@ -281,6 +271,7 @@ useEffect(() => {
     };
 
     initializeApp();
+
 }, []);
 
 async function createNewChat() {

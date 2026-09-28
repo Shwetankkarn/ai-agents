@@ -2,7 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { ClerkProvider } from "@clerk/react";
 import './index.css'
-import App from './App.jsx'
+import AppLoader from './AppLoader.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,7 +13,7 @@ createRoot(document.getElementById('root')).render(
       signUpFallbackRedirectUrl="/"
       signInFallbackRedirectUrl="/"
     >
-      <App />
+      <AppLoader />
     </ClerkProvider>
   </StrictMode>,
 )

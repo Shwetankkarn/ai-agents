@@ -103,7 +103,7 @@ app.get(["/", "/api"], (req, res) => {
 // CHAT
 // ========================
 
-app.get("/conversation/:conversationId", async (req, res) => {
+app.get("/conversations/:conversationId", async (req, res) => {
     try {
 
            const { userId } = getAuth(req);

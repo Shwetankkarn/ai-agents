@@ -15,13 +15,15 @@ async function webSearch(query) {
                 query: query,
                 search_depth: "basic",
                 max_results: 5
-            })
+            }),
+            signal: AbortSignal.timeout(15000)
         }
     );
 
     const data = await response.json();
 
-    return data.results;
+    if (!response.ok) throw new Error(data.message || "Web search request failed");
+    return data.results || [];
 }
 
 export default webSearch;

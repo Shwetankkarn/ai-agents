@@ -28,8 +28,6 @@ Answer in the same language as the user.
 
 async function weatherAgent(question, query, context) {
 
-    console.log("Weather Agent called");
-
     // 1. Get weather directly using router query
     const weatherData = await getWeather([query]);
 

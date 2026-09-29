@@ -1,6 +1,6 @@
 function handleError(error) {
 
-    console.error("ERROR:", error);
+    console.error("Request failed:", error.name || "Error");
 
 
     // ========================

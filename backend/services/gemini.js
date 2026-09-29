@@ -3,11 +3,6 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-console.log(
-    "Gemini API key loaded:",
-    !!process.env.GEMINI_API_KEY
-);
-
 const ai = new GoogleGenAI({
     apiKey: process.env.GEMINI_API_KEY
 });

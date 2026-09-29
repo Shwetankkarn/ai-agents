@@ -31,6 +31,7 @@ Use the previous conversation when necessary to understand the question.
 Answer naturally and concisely.
 
 Answer in the same language as the user.
+When source URLs are available in the results, cite the relevant articles with Markdown links. Do not invent citations.
 `;
 
     return await askGemini(prompt);
@@ -43,12 +44,7 @@ Answer in the same language as the user.
 
 async function newsAgent(question, query, context) {
 
-    console.log("News Agent called");
-
     const topics = query.topics;
-
-    console.log("News topics:");
-    console.log(topics);
 
     const newsData = await getNews(topics);
 

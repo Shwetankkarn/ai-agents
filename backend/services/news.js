@@ -4,23 +4,18 @@ async function getNews(topics) {
 
     for (const topic of topics) {
 
-        console.log("Fetching news for:", topic);
-
         const response = await fetch(
-            `https://newsapi.org/v2/everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt&apiKey=${process.env.NEWS_API_KEY}`
+            `https://newsapi.org/v2/everything?q=${encodeURIComponent(topic)}&sortBy=publishedAt&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`,
+            { signal: AbortSignal.timeout(15000) }
         );
-
-        console.log("NewsAPI status:", response.status);
 
         const data = await response.json();
 
-        //    console.log("NewsAPI response:", data);
+        if (!response.ok) {
+            throw new Error(data.message || "News API request failed");
+        }
 
-           if (!response.ok) {
-    throw new Error(data.message || "News API request failed");
-         }
-
-           newsinfo.push(data);
+        newsinfo.push(data);
     }
 
     return newsinfo;

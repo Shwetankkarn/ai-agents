@@ -46,12 +46,7 @@ async function blockchainAgent(
     context
 ) {
 
-    console.log("BlockChain Agent called");
-
     const cryptocurrency = query.cryptocurrency;
-
-    console.log("Cryptocurrency:");
-    console.log(cryptocurrency);
 
     const cryptoData = await getCryptoPrice(
         cryptocurrency

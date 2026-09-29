@@ -6,25 +6,31 @@ async function getWeather(location) {
 
         let url;
 
-        if (date.toLowerCase() === "today") {
+        const normalizedDate = (date || "today").toLowerCase();
+
+        if (normalizedDate === "today") {
 
             url =
-                `http://api.weatherapi.com/v1/current.json?key=${process.env.WEATHER_API_KEY}&q=${city}&aqi=no`;
+                `https://api.weatherapi.com/v1/current.json?key=${process.env.WEATHER_API_KEY}&q=${encodeURIComponent(city)}&aqi=no`;
 
-        } else if (date.toLowerCase() === "tomorrow") {
+        } else if (normalizedDate === "tomorrow") {
 
             url =
-                `http://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHER_API_KEY}&q=${city}&days=2&aqi=no`;
+                `https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHER_API_KEY}&q=${encodeURIComponent(city)}&days=2&aqi=no`;
 
         } else {
 
             url =
-                `http://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHER_API_KEY}&q=${city}&days=7&aqi=no`;
+                `https://api.weatherapi.com/v1/forecast.json?key=${process.env.WEATHER_API_KEY}&q=${encodeURIComponent(city)}&days=7&aqi=no`;
         }
 
-        const response = await fetch(url);
+        const response = await fetch(url, { signal: AbortSignal.timeout(12000) });
 
         const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error?.message || "Weather service request failed");
+        }
 
         weatherInfo.push(data);
     }

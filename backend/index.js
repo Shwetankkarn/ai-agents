@@ -152,12 +152,12 @@ app.get("/conversations", async (req, res) =>  {
             });
         }
 
-        const conversations = await Conversation.find(
-            { userId: userId },
-            { _id: 1, title: 1 }
-        ).sort({
-            _id: -1
-        });
+       const conversations = await Conversation.find(
+    { userId: userId },
+    { _id: 1, title: 1, messages: 1 }
+).sort({
+    _id: -1
+});
 
         res.json({
             conversations: conversations

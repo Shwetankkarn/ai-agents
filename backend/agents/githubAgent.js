@@ -52,16 +52,8 @@ async function githubAgent(
     context
 ) {
 
-    console.log("GitHub Agent called");
-
     const username = query.username;
     const actions = query.actions;
-
-    console.log("GitHub username:");
-    console.log(username);
-
-    console.log("GitHub actions:");
-    console.log(actions);
 
     let githubData = {};
 

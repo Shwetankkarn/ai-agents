@@ -324,6 +324,56 @@ const sendMessage = async () => {
         setError("");
         setLoading(true);
 
+        const token = await getToken();
+
+        // Get current conversation ID
+        let conversationId =
+            activeConversationId ||
+            localStorage.getItem("activeConversationId");
+
+        // If no conversation exists, create one first
+        if (!conversationId) {
+
+            const conversationResponse = await axios.post(
+                `${API_BASE_URL}/conversations`,
+                {
+                    title: "New Chat"
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+
+            const newConversation =
+                conversationResponse.data.conversation;
+
+            conversationId = newConversation._id;
+
+            setActiveConversationId(conversationId);
+
+            localStorage.setItem(
+                "activeConversationId",
+                conversationId
+            );
+
+            setConversations(prev => [
+                {
+                    _id: newConversation._id,
+                    title: newConversation.title,
+                    messages: []
+                },
+                ...prev
+            ]);
+        }
+
+        console.log(
+            "SEND CONVERSATION ID:",
+            conversationId
+        );
+
+        // Show user's message immediately
         setMessages(prev => [
             ...prev,
             {
@@ -333,33 +383,45 @@ const sendMessage = async () => {
             }
         ]);
 
+        const currentMessage = message;
         setMessage("");
 
-      const token = await getToken();
-
-const response = await axios.post(
-    `${API_BASE_URL}/chat`,
-    {
-        conversationId: activeConversationId,
-        message: message
-    },
-    {
-        headers: {
-            Authorization: `Bearer ${token}`
-        }
-    }
-);
-        const updatedConversations = await loadConversations(false);
-
-        const currentConversation = updatedConversations.find(
-            conversation => conversation._id === activeConversationId
+        // Send message to backend
+        const response = await axios.post(
+            `${API_BASE_URL}/chat`,
+            {
+                conversationId: conversationId,
+                message: currentMessage
+            },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            }
         );
+
+        console.log(
+            "CHAT RESPONSE:",
+            response.data
+        );
+
+        // Refresh conversations
+        const updatedConversations =
+            await loadConversations(false);
+
+        const currentConversation =
+            updatedConversations.find(
+                conversation =>
+                    conversation._id === conversationId
+            );
 
         if (currentConversation) {
 
-            const otherConversations = updatedConversations.filter(
-                conversation => conversation._id !== activeConversationId
-            );
+            const otherConversations =
+                updatedConversations.filter(
+                    conversation =>
+                        conversation._id !== conversationId
+                );
 
             setConversations([
                 {
@@ -370,6 +432,7 @@ const response = await axios.post(
             ]);
         }
 
+        // Show assistant response
         setMessages(prev => [
             ...prev,
             {
@@ -380,25 +443,45 @@ const response = await axios.post(
             }
         ]);
 
+    } catch (error) {
+
+        console.error(
+            "SEND MESSAGE ERROR:",
+            error.response?.status
+        );
+
+        console.error(
+            "SEND MESSAGE DATA:",
+            error.response?.data
+        );
+
+        console.error(
+            "SEND MESSAGE FULL:",
+            error
+        );
+
+        if (!error.response) {
+            setError(
+                "Unable to connect to the server. Please try again."
+            );
+        } else if (error.response.status === 401) {
+            setError(
+                "Your session has expired. Please sign in again."
+            );
+        } else if (error.response.status === 429) {
+            setError(
+                "Service is temporarily busy. Please try again later."
+            );
+        } else {
+    setError(
+        error.response.data?.error ||
+        "Something went wrong. Please try again."
+    );
+}
+
+    } finally {
+        setLoading(false);
     }
-
-    catch (error) {
-    console.error("SEND MESSAGE ERROR:", error.response?.status);
-    console.error("SEND MESSAGE DATA:", error.response?.data);
-    console.error("SEND MESSAGE FULL:", error);
-
-  if (!error.response) {
-    setError("Unable to connect to the server. Please try again.");
-} else if (error.response.status === 401) {
-    setError("Your session has expired. Please sign in again.");
-} else if (error.response.status === 429) {
-    setError("Service is temporarily busy. Please try again later.");
-} else {
-    setError("Something went wrong. Please try again.");
-}
-} finally {
-    setLoading(false);
-}
 };
 
 
